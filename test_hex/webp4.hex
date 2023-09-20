@@ -1,0 +1,38 @@
+## RIFF WEBP
+# R  I  F  F  .  .  .  .  W  E  B  P
+# vp8l:             data_size = 0x5a
+#  52 49 46 46 5a 00 00 00 57 45 42 50
+# vp8x + vp8l:      data_size = 0x6c
+#  52 49 46 46 6c 00 00 00 57 45 42 50
+# vp8x#2 + vp8l:    data_size = 0x6e
+  52 49 46 46 6e 00 00 00 57 45 42 50
+# vp8x + exif + vp8l: size = 142 = 0x8e
+
+
+### VP8X
+#  56 50 38 58 0a 00 00 00 08 00 00 00 0f 00 00 0f 00 00
+## V  P  8  X  .  .  .  .  .  .  .  .  .  .  .  .  .  . 
+## total_size = 0x12, data_size = 0x0a
+
+
+## VP8X #2
+# V  P  8  X  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .
+  56 50 38 58 0c 00 00 00 08 00 00 00 0f 00 00 0f 00 00 00 00
+# total_size = 0x14, data_size = 0x0c
+
+
+## EXIF
+# E  X  I  F  .  .  .  .  H  a  k  u  j  t  e     p  l  a  n  e  t  u     !  !  1  !  .  .  
+#  45 58 49 46 15 00 00 00 48 61 6b 75 6a 74 65 20 70 6c 61 6e 65 74 75 20 21 21 31 21 00 00
+# total_size = 0x1e, data_size = 0x15
+
+
+## VP8L
+# V  P  8  L  N  .  .  .  /  .  .  .  .  u  8  j  #  I  .  .  .  "  Y  n  .  .  .  d  P  r  .  c  p  .  .  I  J  .  n  .  .  .  .  q  .  .  .  .  .  .  o  B  .  0  .  .  .  1  $  T  .  E  .  .  .  .  .  t  -  .  %  3  .  .  .  .  .  {  .  o  .  >  .  .  }  .
+  56 50 38 4c 4e 00 00 00 2f 0f c0 03 00 75 38 6a 23 49 92 16 f1 22 59 6e 0b aa e7 64 50 72 f4 63 70 04 02 49 4a a3 6e dc ff 09 f8 71 fb c3 ed af a3 f8 6f 42 1d 30 e3 80 83 31 24 54 8d 45 16 9a f5 12 86 74 2d a4 25 33 1d 94 c3 91 c3 7b ef 6f db 3e da b6 7d 1f
+# total_size = 0x56, data_size = 0x4e
+
+#<<	"
+#3c 3c 09 22 0a
+
+# hex-me -u webp4.hex webp4.webp

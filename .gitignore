@@ -1,5 +1,4 @@
 .gdb_history
-*.xxd
-*.hex
+*.webp
 webp-polyglot
-out.webp*
+out*
