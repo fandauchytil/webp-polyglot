@@ -1,36 +1,6 @@
 //bin/true; bin="${0%.c}"; if [ "$0" -nt "$bin" ]; then gcc -Wall -Wno-long-long -Wno-variadic-macros -Wno-unused-variable -Wno-unused-but-set-variable -I ~/include -std=gnu99 -ggdb3 -g3 -O0 "$0" -o "$bin" || exit $?; fi; if [ -n "$s" ]; then o="/tmp/strace.$(date +%F_%T)"; echo "STRACE OUTPUT: $o"; s="strace -f -o $o -yy -tt -s 512 "; fi; exec $s "$bin" "$@"; exit $?;
-#include <hacking.h>
+#include "hacking.h"
 
-
-#if 0
-ssize_t write_chunk (struct riff_chunk *ck, int fd_out, uint32_t out_off)
-{
-    int padding = 0;
-    uint8_t *data = ck->chunk_data;
-
-    p ("    -> writting id '%08x'   @  0x%x\n", ck->chunk_id, out_off);
-    out_off += pwrite (fd_out, &(ck->chunk_id), sizeof (ck->chunk_id), out_off);
-    p ("    -> writting size '%08x' @  0x%x\n", ck->chunk_size, out_off);
-    out_off += pwrite (fd_out, &(ck->chunk_size), sizeof (ck->chunk_size), out_off);
-    p ("    -> writting data            @  0x%x\n", out_off);
-    //...
-
-    if (ck->chunk_size % 2 != 0)
-        padding = 1;
-
-    size_t size = ck->chunk_size + padding;
-    while (1)
-    {
-        ssize_t n = pwrite (fd_out, data, size, out_off);
-        if (n <= 0)
-            break;
-        data += n;
-        out_off += n;
-        size -= n;
-    }
-    return out_off;
-}
-#endif
 
 struct riff_chunk {
     uint32_t  chunk_id;            // Chunk type identifier
@@ -293,12 +263,6 @@ int main (int argc, char *argv[])
     if (opt__script_data_first)
         script_data_first_len = strlen (opt__script_data_first);
 
-#if 0
-    for (i = optind; i < argc; i++)
-        p ("in %d  = %s\n", i, argv[i]);
-    return 0;
-#endif
-
 
     if (action & ACT_SHOW)
     {
@@ -423,10 +387,7 @@ int main (int argc, char *argv[])
         vp8x[8] = (img_first->vp8l_image_height >> 8) & 0xff;
         vp8x[9] = (img_first->vp8l_image_height >> 16) & 0xff;
 
-//uint8_t *insert_chunk (uint8_t *buf, uint8_t *data, uint32_t data_len, uint32_t id)
         a ((ptr_data = insert_chunk (ptr_data, vp8x, sizeof (vp8x), CHUNK_ID_VP8X)) == NULL);
-
-        px (buf, 0x1e);
 
 
         uint32_t padding_size = riff->chunk_size - 0x1e;
