@@ -83,6 +83,52 @@ struct riff_chunk {
 
 #define pad(i)      ((i) + (((i) & 1) ? 1 : 0))
 
+#define ACT_SHOW    1
+#define ACT_MBR     2
+#define ACT_CHNG    4
+
+
+#define CHUNK_ID_RIFF       0x46464952
+#define CHUNK_ID_WEBP       0x50424557
+#define CHUNK_ID_VP8L       0x4c385056
+#define CHUNK_ID_VP8X       0x58385056
+
+
+uint8_t *find_chunk_id (uint8_t *file, uint32_t id)
+{
+    uint32_t in_off = 0;
+    uint32_t in_off_next;
+    struct riff_chunk *ck, *riff;
+
+    riff = (struct riff_chunk *) (file + in_off);
+
+    if (riff->chunk_id != CHUNK_ID_RIFF)
+        return NULL;
+
+    in_off += SIZEOF_CHUNK_ID + SIZEOF_CHUNK_SIZE + SIZEOF_CHUNK_ID;
+
+    while (in_off < riff->chunk_size)
+    {
+        ck = (struct riff_chunk *) (file + in_off);
+
+#if 0
+        in_off_next = in_off + pad (ck->chunk_size) + SIZEOF_CHUNK_HEADER;
+
+        p ("\n    [idx: 0x%04x  ->  next idx: 0x%04x (remains: 0x%04x)]\n", in_off, in_off_next, file_size - in_off_next);
+
+        p ("    \"%c%c%c%c\" (0x%08x ; \"%02x%02x%02x%02x\")\n", ((char *)&ck->chunk_id)[0], ((char *) &ck->chunk_id)[1], ((char*)&ck->chunk_id)[2], ((char*)&ck->chunk_id)[3], ck->chunk_id, ((char *)&ck->chunk_id)[0], ((char *) &ck->chunk_id)[1], ((char*)&ck->chunk_id)[2], ((char*)&ck->chunk_id)[3]);
+        p ("        size:         0x%08x\n", ck->chunk_size);
+        //p ("        offset:       0x%08x\n", in_off);
+#endif
+
+        if (ck->chunk_id == id)
+            return file + in_off;
+
+        in_off += pad (ck->chunk_size) + SIZEOF_CHUNK_HEADER;
+    }
+    return NULL;
+}
+
 int main (int argc, char *argv[])
 {
     if (argc < 2)
@@ -94,10 +140,25 @@ int main (int argc, char *argv[])
         exit (1);
     }
 
-    int fd; a ((fd = open (argv[1], O_RDONLY)) < 0);
+    int action = ACT_SHOW;
 
-    struct stat sb; a (fstat (fd, &sb) == -1);
-    uint8_t *file; a ((file = mmap (NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED);
+    if (argv[1][0] == '-')
+    {
+        switch (argv[1][1])
+        {
+            case 'm':
+                action = ACT_MBR;
+                break;
+            case 'c':
+                action = ACT_CHNG;
+                break;
+        }
+    }
+
+    int fd;
+
+    struct stat sb;
+    uint8_t *file, *file_ptr;
 
     struct riff_chunk *riff;
     struct riff_chunk *vp8l;
@@ -111,6 +172,14 @@ int main (int argc, char *argv[])
 
     uint32_t in_off;
     uint32_t out_off = 0;
+
+
+    if (action & ACT_SHOW)
+    {
+
+    a ((fd = open (argv[1], O_RDONLY)) < 0);
+    a (fstat (fd, &sb) == -1);
+    a ((file = mmap (NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED);
 
     riff = (struct riff_chunk *) file;
 
@@ -132,7 +201,7 @@ int main (int argc, char *argv[])
         p ("WARNING: Potentially bad file size!\n");
 
 
-    if (*(uint32_t *) riff->chunk_data == 0x50424557)    /* "WebP" */
+    if (*(uint32_t *) riff->chunk_data == CHUNK_ID_WEBP)
         p ("\nWEBP RIFF container detected:\n");
     else
         p ("ERROR: Unknown RIFF format!\n");
@@ -143,15 +212,17 @@ int main (int argc, char *argv[])
 
     while (in_off < riff->chunk_size)
     {
-        p ("\n    [idx: 0x%04x]\n", in_off);
-
         ck = (struct riff_chunk *) (file + in_off);
+
+        uint32_t in_off_next = in_off + pad (ck->chunk_size) + SIZEOF_CHUNK_HEADER;
+
+        p ("\n    [idx: 0x%04x  ->  next idx: 0x%04x (remains: 0x%04x)]\n", in_off, in_off_next, riff->chunk_size - in_off_next);
 
         p ("    \"%c%c%c%c\" (0x%08x ; \"%02x%02x%02x%02x\")\n", ((char *)&ck->chunk_id)[0], ((char *) &ck->chunk_id)[1], ((char*)&ck->chunk_id)[2], ((char*)&ck->chunk_id)[3], ck->chunk_id, ((char *)&ck->chunk_id)[0], ((char *) &ck->chunk_id)[1], ((char*)&ck->chunk_id)[2], ((char*)&ck->chunk_id)[3]);
         p ("        size:         0x%08x\n", ck->chunk_size);
         p ("        offset:       0x%08x\n", in_off);
 
-        if (ck->chunk_id == 0x58385056) /* VP8X -- extended header */
+        if (ck->chunk_id == CHUNK_ID_VP8X) /* VP8X -- extended header */
         {
             p ("        (extended header)\n");
             p ("        flags: %02x\n", ck->chunk_data[0]);
@@ -166,7 +237,7 @@ int main (int argc, char *argv[])
             canvas = (ck->chunk_data[9] << 16) | (ck->chunk_data[8] << 8) | ck->chunk_data[7];
             p ("        Canvas height:      0x%06x +1 = 0x%06x (decimal = %d)\n", canvas, canvas+1, canvas+1);
         }
-        else if (ck->chunk_id == 0x4c385056) /* VP8L */
+        else if (ck->chunk_id == CHUNK_ID_VP8L)
         {
             vp8l = ck;
 
@@ -184,15 +255,161 @@ int main (int argc, char *argv[])
 
         in_off += pad (ck->chunk_size) + SIZEOF_CHUNK_HEADER;
     }
+    }
 
 
 
 
-
-    if (argc > 2)
+    if (action & ACT_CHNG)
     {
-        int fd_out;
-        static uint8_t buf[1024*1024*600];
+        uint8_t *file1, *file2, *script_data;
+        int fd_file1, fd_file2, fd_script, fd_out;
+        static uint8_t buf[1024*1024*16];
+        //struct riff_chunk *riff;
+        struct riff_chunk *vp8x;
+        struct riff_chunk *img1_vp8l_out, *img2_vp8l_out;
+        struct riff_chunk *my_data;
+        struct riff_chunk *img1_vp8l, *img2_vp8l;
+        size_t script_data_len;
+
+
+        a ((fd_file1 = open (argv[2], O_RDONLY, 0644)) < 0);
+        a ((fd_file2 = open (argv[3], O_RDONLY, 0644)) < 0);
+        a ((fd_script = open (argv[4], O_RDONLY, 0644)) < 0);
+        a ((fd_out = open (argv[5], O_RDWR|O_CREAT|O_TRUNC, 0755)) < 0);
+
+
+        a (fstat (fd_file1, &sb) == -1);
+        a ((file1 = mmap (NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd_file1, 0)) == MAP_FAILED);
+        a (fstat (fd_file2, &sb) == -1);
+        a ((file2 = mmap (NULL, sb.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd_file2, 0)) == MAP_FAILED);
+        a (fstat (fd_script, &sb) == -1);
+        script_data_len = sb.st_size;
+        a ((script_data = mmap (NULL, script_data_len, PROT_READ|PROT_WRITE, MAP_PRIVATE, fd_script, 0)) == MAP_FAILED);
+
+        a ((img1_vp8l = (struct riff_chunk *) find_chunk_id (file1, CHUNK_ID_VP8L)) == NULL);
+        a ((img2_vp8l = (struct riff_chunk *) find_chunk_id (file2, CHUNK_ID_VP8L)) == NULL);
+
+        canvas = *(uint32_t *) &(img1_vp8l->chunk_data[1]);
+        uint32_t img1_vp8l_image_width  = canvas & 0x3fff;
+        uint32_t img1_vp8l_image_height = (canvas >> 14) & 0x3fff;
+
+        canvas = *(uint32_t *) &(img2_vp8l->chunk_data[1]);
+        uint32_t img2_vp8l_image_width  = canvas & 0x3fff;
+        uint32_t img2_vp8l_image_height = (canvas >> 14) & 0x3fff;
+
+        p ("img1: %d x %d\n", img1_vp8l_image_width, img1_vp8l_image_height);
+        p ("img2: %d x %d\n", img2_vp8l_image_width, img2_vp8l_image_height);
+
+        a (img1_vp8l_image_width != img2_vp8l_image_width);
+        a (img1_vp8l_image_height != img2_vp8l_image_height);
+
+
+        p ("\nCREATING NEW WEBP:\n");
+
+        /*
+         *                                           RIFF_SZ
+         *                     .-------------------------------------------------------------------------------------------.
+         *                     |            MBR_SZ                                                                         |
+         *      v--------------v--------------------------------------------------v                                        v
+         *      "RIFF" RIFF_SZ "WEBP" "VP8X" VP8X_SZ 10 "EXIF" EXIF_SZ EXIF_DATA_SZ EXIF_padding "VP8L" VP8L_SZ VP8L_DATA_SZ
+         *      ^ 4 + 4 + 4 + 4 + 4 + 10 = 30 = 0x1e  ^              ^                           ^-------------------------^
+         *      |-------------------------------------'              |                            4 + 4 + VP8L_DATA_SZ = 8 + VP8L_DATA_SZ
+         *      | 30 + 4 + 4 = 38 = 0x26                             |
+         *      '----------------------------------------------------'
+         *
+         * EXIF_DATA_SZ = my_asm_code_size - 0x26
+         * EXIF_padding = RIFF_SZ - ((0x1e) + (8 + VP8L_DATA_SZ))
+         *   (EXIF headers are ignored because it is the EXIF_SZ we are computing.)
+         */
+
+        riff = (struct riff_chunk *) (buf + 0);
+
+        riff->chunk_id = CHUNK_ID_RIFF;
+        riff->chunk_size = 0x0023230a;        // "\n##\0"
+
+        *(uint32_t *) (riff->chunk_data) = CHUNK_ID_WEBP;
+
+        vp8x = (struct riff_chunk *) (buf + SIZEOF_CHUNK_HEADER + SIZEOF_CHUNK_ID);
+
+        vp8x->chunk_id   = CHUNK_ID_VP8X;
+        vp8x->chunk_size = 0x0a;
+        //ck->chunk_data[0] = 0x08;        // EXIF data
+        vp8x->chunk_data[0] = 0;
+        //vp8x->chunk_data[1] = 0;
+        //vp8x->chunk_data[2] = 0;
+        vp8x->chunk_data[1] = '\n';      // XXX
+        vp8x->chunk_data[2] = '#';      // XXX
+        vp8x->chunk_data[3] = 0;
+        // image width (24 bits)
+        vp8x->chunk_data[4] = img1_vp8l_image_width & 0xff;
+        vp8x->chunk_data[5] = (img1_vp8l_image_width >> 8) & 0xff;
+        vp8x->chunk_data[6] = (img1_vp8l_image_width >> 16) & 0xff;
+        // image height (24 bits)
+        vp8x->chunk_data[7] = img1_vp8l_image_height& 0xff;
+        vp8x->chunk_data[8] = (img1_vp8l_image_height >> 8) & 0xff;
+        vp8x->chunk_data[9] = (img1_vp8l_image_height >> 16) & 0xff;
+
+        //px (vp8x, vp8x->chunk_size + SIZEOF_CHUNK_HEADER);
+        //px (buf, SIZEOF_CHUNK_HEADER + SIZEOF_CHUNK_ID + vp8x->chunk_size + SIZEOF_CHUNK_HEADER);
+
+        my_data = (struct riff_chunk *) (((uint8_t *) vp8x) + pad (vp8x->chunk_size) + SIZEOF_CHUNK_HEADER);
+
+        my_data->chunk_id = 0x4c454853; // "SHEL"
+        my_data->chunk_size = riff->chunk_size - (0x1e + SIZEOF_CHUNK_HEADER + pad (img1_vp8l->chunk_size) + SIZEOF_CHUNK_HEADER + pad (img2_vp8l->chunk_size));
+
+        p ("    paddings:\n");
+        p ("        riff->chunk_size:       %x\n", riff->chunk_size);
+        p ("        mbr.bin size+hdrs:      %lx\n", sb.st_size);
+        p ("        WEBP hdrs:              %x\n", 0x1e);
+        p ("        vp8x->chunk_size:       %x -> %x\n", vp8x->chunk_size, pad (vp8x->chunk_size));
+        p ("        vp8l headers:           %x\n",  SIZEOF_CHUNK_HEADER);
+        p ("        vp8l_01->chunk_size:    %x -> %x\n", img1_vp8l->chunk_size, pad (img1_vp8l->chunk_size));
+        p ("        vp8l_02->chunk_size:    %x -> %x\n", img2_vp8l->chunk_size, pad (img2_vp8l->chunk_size));
+        p ("        (skiping exif hdrs:     %x)\n", SIZEOF_CHUNK_HEADER);
+        p ("        my_data->chunk_size:    %x -> %x\n", my_data->chunk_size, pad (my_data->chunk_size));
+        p ("        my_data size:           %x\n", my_data->chunk_size);
+
+
+        img1_vp8l_out = (struct riff_chunk *) (((uint8_t *) my_data) + pad (my_data->chunk_size) + SIZEOF_CHUNK_HEADER);
+        a (memmove (img1_vp8l_out, img1_vp8l, img1_vp8l->chunk_size + SIZEOF_CHUNK_HEADER) != img1_vp8l_out);
+
+        img2_vp8l_out = (struct riff_chunk *) (((uint8_t *) img1_vp8l_out) + pad (img1_vp8l_out->chunk_size) + SIZEOF_CHUNK_HEADER);
+        a (memmove (img2_vp8l_out, img2_vp8l, img2_vp8l->chunk_size + SIZEOF_CHUNK_HEADER) != img2_vp8l_out);
+        img2_vp8l_out->chunk_id = CHUNK_ID_VP8L - 1;
+
+
+        char *ptr = (char *) my_data->chunk_data;
+
+        ptr[0] = '\n';
+        ptr++;
+
+        ptr += snprintf (ptr, 128, "IMG1=%d; IMG2=%d;\n", (u32) ((void *)img1_vp8l_out - (void*) buf),  (u32) ((void *)img2_vp8l_out - (void*) buf));
+        a (memmove (ptr, script_data, script_data_len) != ptr);
+
+
+        void *data = buf;
+        size_t size = riff->chunk_size + SIZEOF_CHUNK_HEADER;
+
+        p ("    Writing size: %lx\n", size);
+
+        while (1)
+        {
+            ssize_t n;
+            a ((n = write (fd_out, data, size)) < 0);
+            if (n == 0)
+                break;
+            data += n;
+            size -= n;
+        }
+    }
+
+
+#if 0
+    if (action & ACT_MBR)
+    {
+        int fd_mbr, fd_out;
+        static uint8_t buf[1024*1024*16];
         int n;
         //struct riff_chunk *riff;
         struct riff_chunk *vp8x;
@@ -218,27 +435,32 @@ int main (int argc, char *argv[])
          * EXIF_padding = RIFF_SZ - ((0x1e) + (8 + VP8L_DATA_SZ))
          *   (EXIF headers are ignored because it is the EXIF_SZ we are computing.)
          */
-        a ((fd_out = open (argv[2], O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0);
+
+
+        a ((fd_mbr = open (argv[2], O_RDONLY, 0644)) < 0);
+        a ((fd_out = open (argv[3], O_RDWR|O_CREAT|O_TRUNC, 0644)) < 0);
+
+        a (fstat (fd_mbr, &sb) == -1);
+
+        a ((n = read (fd_mbr, buf, sb.st_size)) != sb.st_size);
 
         riff = (struct riff_chunk *) (buf + 0);
-
-        riff->chunk_id   = 0x46464952;      // "RIFF"
-        riff->chunk_size = 0x00223c3c;            // "<<\"\0"  [2.14 MiB]
-        riff->chunk_size = 0x00003c3c;            // "<<\0\0"  [2.14 MiB]
-        //riff->chunk_size = 0x01223c3c;            // "<<\"\1"  <-- bash checks for \0 on the first line  [18.14 MiB]
-        //riff->chunk_size = 0x21223c3c;            // "<<\"!"  <-- bash checks for \0 on the first line  [18.14 MiB]
-        *((uint32_t *) &(riff->chunk_data)) = 0x50424557;    // "WEBP"
-
         vp8x = (struct riff_chunk *) (buf + SIZEOF_CHUNK_HEADER + SIZEOF_CHUNK_ID);
 
-        vp8x->chunk_id   = 0x58385056;     // "VP8X"
-        vp8x->chunk_size = 0x0a22;            // "\"\n"
-        vp8x->chunk_size = 0x0a;            // "\"\n"
-        vp8x->chunk_data[0] = 0x08;        // EXIF data
-        //vp8x->chunk_data[0] = 0;
+        vp8x->chunk_id   = CHUNK_ID_VP8X;
+        vp8x->chunk_size = 0x0a;
+        //ck->chunk_data[0] = 0x08;        // EXIF data
+        vp8x->chunk_data[0] = 0;
         vp8x->chunk_data[1] = 0;
         vp8x->chunk_data[2] = 0;
         vp8x->chunk_data[3] = 0;
+        //XXX
+        vp8x->chunk_data[1] = '\n';      // XXX
+        vp8x->chunk_data[2] = '#';      // XXX
+        //XXX
+        vp8x->chunk_data[1] = '\'';      // XXX
+        vp8x->chunk_data[2] = '\n';      // XXX
+        //XXX
         // image width (24 bits)
         vp8x->chunk_data[4] = vp8l_image_width & 0xff;
         vp8x->chunk_data[5] = (vp8l_image_width >> 8) & 0xff;
@@ -248,25 +470,28 @@ int main (int argc, char *argv[])
         vp8x->chunk_data[8] = (vp8l_image_height >> 8) & 0xff;
         vp8x->chunk_data[9] = (vp8l_image_height >> 16) & 0xff;
 
+        //px (vp8x, vp8x->chunk_size + SIZEOF_CHUNK_HEADER);
+        //px (buf, SIZEOF_CHUNK_HEADER + SIZEOF_CHUNK_ID + vp8x->chunk_size + SIZEOF_CHUNK_HEADER);
 
-        vp8l_out = (struct riff_chunk *) (((uint8_t *) vp8x) + pad (vp8x->chunk_size) + SIZEOF_CHUNK_HEADER);
-        a (memmove (vp8l_out, vp8l, vp8l->chunk_size + SIZEOF_CHUNK_HEADER) != vp8l_out);
+        my_data = (struct riff_chunk *) (((uint8_t *) vp8x) + pad (vp8x->chunk_size) + SIZEOF_CHUNK_HEADER);
 
-
-        /* pad section */
-        struct riff_chunk *exif_pad;
-        exif_pad = (struct riff_chunk *) (((uint8_t *) vp8l_out) + pad (vp8l_out->chunk_size) + SIZEOF_CHUNK_HEADER);
-        exif_pad->chunk_id = 0x46495845; // "EXIF"
-        exif_pad->chunk_size = riff->chunk_size - SIZEOF_CHUNK_ID - SIZEOF_CHUNK_HEADER - pad (vp8x->chunk_size) - SIZEOF_CHUNK_HEADER - pad (vp8l_out->chunk_size) - SIZEOF_CHUNK_HEADER - SIZEOF_CHUNK_HEADER;
-        /* EXIF_DATA =                            WEBP_ID +         VP8X_ID + VP8X_SIZE + VP8X_DATA +              VP8L_ID + VP8L_SIZE + VP8L_DATA +                  EXIF_ID + EXIF_SIZE */
+        my_data->chunk_size = riff->chunk_size - (0x1e + SIZEOF_CHUNK_HEADER + pad (vp8l->chunk_size));
 
         p ("    paddings:\n");
         p ("        riff->chunk_size:       %x\n", riff->chunk_size);
+        p ("        mbr.bin size+hdrs:      %lx\n", sb.st_size);
+        p ("        WEBP hdrs:              %x\n", 0x1e);
         p ("        vp8x->chunk_size:       %x -> %x\n", vp8x->chunk_size, pad (vp8x->chunk_size));
+        p ("        vp8l headers:           %x\n",  SIZEOF_CHUNK_HEADER);
         p ("        vp8l->chunk_size:       %x -> %x\n", vp8l->chunk_size, pad (vp8l->chunk_size));
-        p ("        exif_pad->chunk_size:   %x -> %x\n", exif_pad->chunk_size, pad (exif_pad->chunk_size));
+        p ("        (skiping exif hdrs:     %x)\n", SIZEOF_CHUNK_HEADER);
+        p ("        my_data->chunk_size:    %x -> %x\n", my_data->chunk_size, pad (my_data->chunk_size));
+        p ("        my_data size:           %x\n", riff->chunk_size - (0x1e + SIZEOF_CHUNK_HEADER + pad (vp8l->chunk_size)));
 
-        
+        vp8l_out = (struct riff_chunk *) (((uint8_t *) my_data) + pad (my_data->chunk_size) + SIZEOF_CHUNK_HEADER);
+        //px (my_data, my_data->chunk_size + SIZEOF_CHUNK_HEADER + SIZEOF_CHUNK_HEADER);
+        a (memmove (vp8l_out, vp8l, vp8l->chunk_size + SIZEOF_CHUNK_HEADER) != vp8l_out);
+
 
         void *data = buf;
         size_t size = riff->chunk_size + SIZEOF_CHUNK_HEADER;
@@ -283,6 +508,7 @@ int main (int argc, char *argv[])
             size -= n;
         }
     }
+#endif
 
     return 0;
 }
