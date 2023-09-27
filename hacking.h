@@ -52,7 +52,8 @@ typedef uint64_t    u64;
 
 #define p2(s...)  do { int i; struct tm *lt; static char buf[80]; static struct timeval tv; gettimeofday (&tv, NULL); lt = localtime (&(tv.tv_sec)); strftime (buf, sizeof (buf), "%F %T", lt); i = fprintf (stderr, "%s.%06ld (%ld.%ld)", buf, tv.tv_usec, tv.tv_sec - tv_last_cmd.tv_sec, tv.tv_usec - tv_last_cmd.tv_usec); fprintf (stderr, "%*c", 50-i, ' '); fprintf (stderr, s); tv_last_cmd = tv; } while (0)
 
-void xs (char *buf, unsigned char *s, int n)
+// String to hex-string
+void sxs (char *buf, unsigned char *s, int n)
 {
     int i = 0;
     //static char b[1024];
@@ -66,6 +67,35 @@ void xs (char *buf, unsigned char *s, int n)
         buf[i*3 -1] = '\0';
 }
 
+// Hex-string to bin
+int sx2b (char *str, char *out_buf)
+{
+    int i, i2, c = 0, num;
+    char *out = (out_buf == NULL) ? str : out_buf;
+
+    for (i = i2 = 0; str[i] != '\0'; i++)
+    {
+        if ((str[i] >= 'a' && str[i] <= 'f'))
+            num = str[i] - 'a' + 0x0a;
+        else if ((str[i] >= 'A' && str[i] <= 'F'))
+            num = str[i] - 'A' + 0x0a;
+        else if ((str[i] >= '0' && str[i] <= '9'))
+            num = str[i] - '0';
+        else
+            continue;
+
+        if (c == 0) {
+            out[i2] = num << 4;
+            c = 1;
+        }
+        else {
+            out[i2] = num | out[i2];
+            i2++;
+            c = 0;
+        }
+    }
+    return i2;
+}
 
 #define px(s, n)    (pxd ((u8 *) (s), (size_t) (n)))
 void pxd (u8 *s, size_t n)

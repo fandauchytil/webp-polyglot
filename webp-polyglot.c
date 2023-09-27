@@ -228,16 +228,16 @@ int main (int argc, char *argv[])
         switch (opt)
         {
             case '0':
-                opt__vp8x_chunk_data = bswap_32 (strtoul ((const char *) (optarg), NULL, 16));
+                sx2b (optarg, (char *) &opt__vp8x_chunk_data);
                 break;
             case '1':
                 opt__script_data_first = optarg;
                 break;
             case 'C':
-                opt__riff_chunk_size = bswap_32 (strtoul ((const char *) (optarg), NULL, 16));
+                sx2b (optarg, (char *) &opt__riff_chunk_size);
                 break;
             case 'S':
-                opt__script_chunk_size = bswap_32 (strtoul ((const char *) (optarg), NULL, 16));
+                sx2b (optarg, (char *) &opt__script_chunk_size);
                 break;
             case 'o':
                 opt__out_filename = optarg;
