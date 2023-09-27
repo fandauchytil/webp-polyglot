@@ -16,7 +16,7 @@ struct riff_chunk {
 #define pad(i)      ((i) + (((i) & 1) ? 1 : 0))
 
 #define ACT_SHOW    1
-#define ACT_MBR     2
+//#define ACT_MBR     2
 #define ACT_CHNG    4
 
 
@@ -29,7 +29,6 @@ struct riff_chunk {
 uint8_t *find_chunk_id (uint8_t *file, uint32_t id)
 {
     uint32_t in_off = 0;
-    uint32_t in_off_next;
     struct riff_chunk *ck, *riff;
 
     riff = (struct riff_chunk *) (file + in_off);
@@ -66,12 +65,11 @@ void parse_webp (char *filename)
     int fd;
 
     struct stat sb;
-    uint8_t *file, *file_ptr;
+    uint8_t *file;
 
     struct riff_chunk *riff;
     struct riff_chunk *vp8l;
     struct riff_chunk *ck;
-    struct riff_chunk tmp;
 
     uint32_t canvas = 0;
     uint32_t vp8l_image_width = 0;
@@ -79,7 +77,6 @@ void parse_webp (char *filename)
 
 
     uint32_t in_off;
-    uint32_t out_off = 0;
 
 
     p ("== %s\n\n", filename);
@@ -170,17 +167,6 @@ void parse_webp (char *filename)
 }
 
 
-void usage (char *name, int status)
-{
-    p ("Usage: %s <RIFF_FILE> [<DATA_FILE> <OUT_FILE>]\n", name);
-    p ("\n");
-    p ("Examples:\n");
-    p ("    %s image.webp                       # show info and exit\n", name);
-    p ("    %s -S 20200000 -s script-ruby-equal.rb -p -1 $'\';\n' -C 203d2700 -c -o out.webp cat.webp dog.webp\n", name);
-    p ("    %s -s mbr.bin -c -o out.webp h4x_16x16-vp8l-lossless.webp      # create 'out.webp' containing 'mbr.bin' and a image from 'image.webp'\n", name);
-    exit (status);
-}
-
 uint8_t *insert_chunk (uint8_t *buf, uint8_t *data, uint32_t data_len, uint32_t id)
 {
     struct riff_chunk *ck = (struct riff_chunk *) buf;
@@ -198,6 +184,26 @@ uint8_t *insert_chunk (uint8_t *buf, uint8_t *data, uint32_t data_len, uint32_t 
 }
 
 
+void usage (char *name, int status)
+{
+    p ("Usage: %s <RIFF_FILE> [<DATA_FILE> <OUT_FILE>]\n", name);
+    p ("  -h        this help\n");
+    p ("  -c        create a new WebP image\n");
+    p ("  -p        insert variables with offset(s) of image(s)\n");
+    p ("  -s FILE   script/mbr that should be embedded\n");
+    p ("  -o FILE   output filename\n");
+    p ("  -S HEX    script/mbr chunk size in HEX STRING\n");
+    p ("  -C HEX    RIFF chunk size HEX STRING\n");
+    p ("  -1 STR    script data that will be added into script chunk before the script\n");
+    p ("  -0 HEX    4 bytes of vp8x header\n");
+    p ("\n");
+    p ("Examples:\n");
+    p ("    %s image.webp                                             # show info and exit\n", name);
+    p ("    %s -s mbr.bin -c -o out.webp h4x_16x16-vp8l-lossless.webp # create 'out.webp' containing 'mbr.bin' and VP8L from 'image.webp'\n", name);
+    p ("    %s -S 20200000 -s script-ruby-equal.rb -p -1 $'\';\n' -C 203d2700 -c -o out.webp cat.webp dog.webp\n", name);
+    exit (status);
+}
+
 int main (int argc, char *argv[])
 {
     char *opt__out_filename = NULL, *opt__script_filename = NULL;
@@ -208,7 +214,7 @@ int main (int argc, char *argv[])
     uint32_t opt__vp8x_chunk_data = 0x00000000;
     uint32_t opt__script_chunk_id = 0x4b434148;         // "HACK"
     uint32_t opt__script_chunk_size = 0x00000000;
-    int opt__script_has_riff_header = 0;
+    //int opt__script_has_riff_header = 0;
     int opt__script_data_img_pos    = 0;
     int script_data_first_len = 0;
     char *opt__script_data_first = NULL;
@@ -239,12 +245,11 @@ int main (int argc, char *argv[])
             case 'p':
                 opt__script_data_img_pos = 1;
                 break;
+#if 0
             case 'H':
                 opt__script_has_riff_header = 1;
                 break;
-            case 'm':
-                action = ACT_MBR;
-                break;
+#endif
             case 'c':
                 action = ACT_CHNG;
                 break;
@@ -277,9 +282,7 @@ int main (int argc, char *argv[])
         int num_images = 0, fd, fd_script, fd_out;
         static uint8_t buf[1024*1024*16];
         struct riff_chunk *riff;
-        struct riff_chunk *my_data;
-        struct riff_chunk *padding;
-        size_t script_data_len;
+        size_t script_data_len = 0;
 
         uint32_t canvas;
 

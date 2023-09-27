@@ -54,7 +54,7 @@ typedef uint64_t    u64;
 
 void xs (char *buf, unsigned char *s, int n)
 {
-    int i, j = 0;
+    int i = 0;
     //static char b[1024];
 
     for (i = 0; i < n; i++) {

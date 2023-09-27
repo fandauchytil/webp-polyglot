@@ -11,8 +11,8 @@ db "RIFF"                       ; Dissasembles to:
                                 ;   46      inc si
 ; RIFF size
 ;db 0xe2                         ; `LOOP` instruction (has side effect: cx--) [size = 9954]
-db 0x90							; NOP
-db 0xe9                   		; short jump instruction [size = 2550160 = 2.4 MiB]
+db 0x90                         ; NOP
+db 0xe9                         ; short jump instruction [size = 2550160 = 2.4 MiB]
 db (_start - $ - 1)             ; 1 byte (jump) offset
 db 0x00                         ; "padding" -> RIFF size is 4 bytes, "E9" jump has size of 3 bytes.
 
@@ -188,7 +188,7 @@ htp2_size equ $-htp2
 
 htp3:
     db "Remember, hacking is more than just a crime.", 0x0a
-    db "It's a survivaI trait."
+    db "It's a survival trait."
 htp3_size equ $-htp3
 
 h4x_cz:
