@@ -192,15 +192,18 @@ void usage (char *name, int status)
     p ("  -p        insert variables with offset(s) of image(s)\n");
     p ("  -s FILE   script/mbr that should be embedded\n");
     p ("  -o FILE   output filename\n");
-    p ("  -S HEX    script/mbr chunk size in HEX STRING\n");
-    p ("  -C HEX    RIFF chunk size HEX STRING\n");
+    p ("  -S HEX    script/mbr chunk size in HEX STRING (4 bytes)\n");
+    p ("  -C HEX    RIFF chunk size HEX STRING (4 bytes)\n");
     p ("  -1 STR    script data that will be added into script chunk before the script\n");
     p ("  -0 HEX    4 bytes of vp8x header\n");
     p ("\n");
     p ("Examples:\n");
-    p ("    %s image.webp                                             # show info and exit\n", name);
-    p ("    %s -s mbr.bin -c -o out.webp h4x_16x16-vp8l-lossless.webp # create 'out.webp' containing 'mbr.bin' and VP8L from 'image.webp'\n", name);
-    p ("    %s -S 20200000 -s script-ruby-equal.rb -p -1 $'\';\n' -C 203d2700 -c -o out.webp cat.webp dog.webp\n", name);
+    p ("    # Show info about WebP image and exit:\n");
+    p ("    %s image.webp\n", name);
+    p ("    # Create 'out.webp' containing 'mbr.bin' and VP8L from 'image.webp':\n");
+    p ("    %s -s mbr.bin -c -o out.webp h4x_16x16-vp8l-lossless.webp\n", name);
+    p ("    # Create 'out.webp' containing two VP8L images ('cat.webp' and 'dog.webp') and that is executable with Ruby:\n");
+    p ("    %s -S 20200000 -s script-ruby-equal.rb -p -1 $'\';\\n' -C 203d2700 -c -o out.webp cat.webp dog.webp\n", name);
     exit (status);
 }
 

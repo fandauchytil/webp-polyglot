@@ -40,6 +40,6 @@ Embed Ruby code and multiple VP8L WebP images into one WebP image:
 ![This image can be booted on x86.](examples/hack_the_forest-cones.mbr.webp)
 
 ```shell
-qemu-system-x86_64 -fda /a/down/out.webp
+qemu-system-x86_64 -fda examples/hack_the_forest-cones.mbr.webp
 ```
 
