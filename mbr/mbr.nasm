@@ -1,3 +1,7 @@
+; 0BSD, 2023, Fanda Uchytil
+;
+; Build: nasm -O0 -f bin mbr.nasm -o mbr.bin
+;
 BITS    16                      ; MBR operates in 16 bit (real) mode
 ORG     0x7c00                  ; Origin address -> where the BIOS places the program in memory
 ;org     0x0100                  ; DOS loading address (for testing in dosbox)

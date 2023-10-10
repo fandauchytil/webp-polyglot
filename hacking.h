@@ -1,3 +1,5 @@
+/* 0BSD, 2023, Fanda Uchytil
+ */
 #ifndef _HACKING__H_
 #define _HACKING__H_
 

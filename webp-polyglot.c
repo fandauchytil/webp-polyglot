@@ -1,4 +1,7 @@
 //bin/true; bin="${0%.c}"; if [ "$0" -nt "$bin" ]; then gcc -Wall -Wno-long-long -Wno-variadic-macros -Wno-unused-variable -Wno-unused-but-set-variable -I ~/include -std=gnu99 -ggdb3 -g3 -O0 "$0" -o "$bin" || exit $?; fi; if [ -n "$s" ]; then o="/tmp/strace.$(date +%F_%T)"; echo "STRACE OUTPUT: $o"; s="strace -f -o $o -yy -tt -s 512 "; fi; exec $s "$bin" "$@"; exit $?;
+/*
+ * 0BSD, 2023, Fanda Uchytil
+ */
 #include "hacking.h"
 
 
